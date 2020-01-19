@@ -1,16 +1,16 @@
-FROM alpine:3.8
+FROM alpine:3.10
 
-LABEL maintainer="mritd <mritd1234@gmail.com>"
+LABEL maintainer="mritd <mritd@linux.com>"
 
 ARG TZ="Asia/Shanghai"
 
 ENV TZ ${TZ}
-ENV TELEPORT_VERSION v3.0.1
+ENV TELEPORT_VERSION v4.0.2
 ENV TELEPORT_DOWNLOAD_URL https://get.gravitational.com/teleport-${TELEPORT_VERSION}-linux-amd64-bin.tar.gz
 
 RUN apk upgrade \
     && apk add bash tzdata libc6-compat wget tar ca-certificates \
-    && wget ${TELEPORT_DOWNLOAD_URL} \
+    && wget -q ${TELEPORT_DOWNLOAD_URL} \
     && tar -zxvf teleport-${TELEPORT_VERSION}-linux-amd64-bin.tar.gz \
     && mv teleport/tctl teleport/teleport teleport/tsh /usr/bin \
     && mkdir /etc/teleport \

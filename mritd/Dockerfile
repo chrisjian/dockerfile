@@ -1,6 +1,6 @@
-FROM nginx:1.14.2-alpine
+FROM nginx:1.17.1-alpine
 
-LABEL maintainer="mritd <mritd1234@gmail.com>"
+LABEL maintainer="mritd <mritd@linux.com>"
 
 ARG TZ='Asia/Shanghai'
 
@@ -14,8 +14,8 @@ RUN apk upgrade --update \
     && echo ${TZ} > /etc/timezone \
     && rm -rf /var/cache/apk/*
 
-ADD entrypoint.sh /entrypoint.sh
-ADD flush /usr/local/bin/flush
+COPY entrypoint.sh /entrypoint.sh
+COPY flush /usr/local/bin/flush
 
 WORKDIR /usr/share/nginx/html
 

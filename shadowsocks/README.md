@@ -2,13 +2,15 @@
 
 ![](https://img.shields.io/docker/stars/mritd/shadowsocks.svg) ![](https://img.shields.io/docker/pulls/mritd/shadowsocks.svg) ![](https://img.shields.io/microbadger/image-size/mritd/shadowsocks.svg) ![](https://img.shields.io/microbadger/layers/mritd/shadowsocks.svg)
 
-- **shadowsocks-libev 版本: 3.2.4**
-- **kcptun 版本: 20190109**
+- **shadowsocks-libev 版本: 3.3.3**
+- **kcptun 版本: 20191229**
+
+**注意: 由于 Docker Hub 自动构建功能最近出现的 Bug 比较多，构建队列缓慢；部分镜像(包含本镜像)可能会在采用本地 Build 然后直接 push 到远程仓库的方式构建；如有安全疑虑，可自行使用本 Dockerfile 构建**
 
 ### 打开姿势
 
 ``` sh
-docker run -dt --name ss -p 6443:6443 mritd/shadowsocks -s "-s 0.0.0.0 -p 6443 -m chacha20 -k test123 --fast-open"
+docker run -dt --name ss -p 6443:6443 mritd/shadowsocks -s "-s 0.0.0.0 -p 6443 -m chacha20-ietf-poly1305 -k test123"
 ```
 
 ### 支持选项
@@ -18,7 +20,6 @@ docker run -dt --name ss -p 6443:6443 mritd/shadowsocks -s "-s 0.0.0.0 -p 6443 -
 - `-x` : 开启 kcptun 支持
 - `-e` : 指定 kcptun 命令，默认为 `kcpserver` 
 - `-k` : kcptun 参数字符串
-- `-r` : 使用 `/dev/urandom` 来生成随机数
 
 ### 选项描述
 
@@ -27,33 +28,32 @@ docker run -dt --name ss -p 6443:6443 mritd/shadowsocks -s "-s 0.0.0.0 -p 6443 -
 - `-x` : 指定该参数后才会开启 kcptun 支持，否则将默认禁用 kcptun
 - `-e` : 参数后指定一个 kcptun 命令，如 kcpclient，不写默认为 kcpserver；该参数用于 kcptun 在客户端和服务端工作模式间切换，可选项如下: `kcpserver`、`kcpclient`
 - `-k` : 参数后指定一个 kcptun 的参数字符串，所有参数将被拼接到 `kcptun` 后
-- `-r` : 修复在 GCE 上可能出现的 `This system doesn't provide enough entropy to quickly generate high-quality random numbers.` 错误
 
 ### 命令示例
 
 **Server 端**
 
 ``` sh
-docker run -dt --name ssserver -p 6443:6443 -p 6500:6500/udp mritd/shadowsocks -m "ss-server" -s "-s 0.0.0.0 -p 6443 -m chacha20 -k test123 --fast-open" -x -e "kcpserver" -k "-t 127.0.0.1:6443 -l :6500 -mode fast2"
+docker run -dt --name ssserver -p 6443:6443 -p 6500:6500/udp mritd/shadowsocks -m "ss-server" -s "-s 0.0.0.0 -p 6443 -m chacha20-ietf-poly1305 -k test123" -x -e "kcpserver" -k "-t 127.0.0.1:6443 -l :6500 -mode fast2"
 ```
 
 **以上命令相当于执行了**
 
 ``` sh
-ss-server -s 0.0.0.0 -p 6443 -m chacha20 -k test123 --fast-open
+ss-server -s 0.0.0.0 -p 6443 -m chacha20-ietf-poly1305 -k test123
 kcpserver -t 127.0.0.1:6443 -l :6500 -mode fast2
 ```
 
 **Client 端**
 
 ``` sh
-docker run -dt --name ssclient -p 1080:1080 mritd/shadowsocks -m "ss-local" -s "-s 127.0.0.1 -p 6500 -b 0.0.0.0 -l 1080 -m chacha20 -k test123 --fast-open" -x -e "kcpclient" -k "-r SSSERVER_IP:6500 -l :6500 -mode fast2"
+docker run -dt --name ssclient -p 1080:1080 mritd/shadowsocks -m "ss-local" -s "-s 127.0.0.1 -p 6500 -b 0.0.0.0 -l 1080 -m chacha20-ietf-poly1305 -k test123" -x -e "kcpclient" -k "-r SSSERVER_IP:6500 -l :6500 -mode fast2"
 ```
 
 **以上命令相当于执行了** 
 
 ``` sh
-ss-local -s 127.0.0.1 -p 6500 -b 0.0.0.0 -l 1080 -m chacha20 -k test123 --fast-open 
+ss-local -s 127.0.0.1 -p 6500 -b 0.0.0.0 -l 1080 -m chacha20-ietf-poly1305 -k test123
 kcpclient -r SSSERVER_IP:6500 -l :6500 -mode fast2
 ```
 
@@ -72,13 +72,12 @@ kcpclient -r SSSERVER_IP:6500 -l :6500 -mode fast2
 |KCP_FLAG|是否开启 kcptun 支持|可选参数为 true 和 false，默认为 fasle 禁用 kcptun|
 |KCP_MODULE|kcptun 启动命令| `kcpserver`、`kcpclient`|
 |KCP_CONFIG|kcptun 参数字符串|所有字符串内内容应当为 kcptun 支持的选项参数|
-|RNGD_FLAG|是否使用 `/dev/urandom` 生成随机数|可选参数为 true 和 false，默认为 fasle 不使用|
 
 
 使用时可指定环境变量，如下
 
 ``` sh
-docker run -dt --name ss -p 6443:6443 -p 6500:6500/udp -e SS_CONFIG="-s 0.0.0.0 -p 6443 -m chacha20 -k test123 --fast-open" -e KCP_MODULE="kcpserver" -e KCP_CONFIG="-t 127.0.0.1:6443 -l :6500 -mode fast2" -e KCP_FLAG="true" mritd/shadowsocks
+docker run -dt --name ss -p 6443:6443 -p 6500:6500/udp -e SS_CONFIG="-s 0.0.0.0 -p 6443 -m chacha20-ietf-poly1305 -k test123" -e KCP_MODULE="kcpserver" -e KCP_CONFIG="-t 127.0.0.1:6443 -l :6500 -mode fast2" -e KCP_FLAG="true" mritd/shadowsocks
 ```
 
 ### 容器平台说明
@@ -88,8 +87,7 @@ docker run -dt --name ss -p 6443:6443 -p 6500:6500/udp -e SS_CONFIG="-s 0.0.0.0 
 ### GCE 随机数生成错误
 
 如果在 GCE 上使用本镜像，在特殊情况下可能会出现 `This system doesn't provide enough entropy to quickly generate high-quality random numbers.` 错误；
-这种情况是由于宿主机没有能提供足够的熵来生成随机数导致，修复办法可以考虑增加 `-r` 选项来使用 `/dev/urandom` 来生成，不过并不算推荐此种方式；**`-r` 
-选项可能需要配合 docker 的 `--privileged` 选项启用特权模式来使用**
+这种情况是由于宿主机没有能提供足够的熵来生成随机数导致，修复办法可以考虑增加 `--device /dev/urandom:/dev/urandom` 选项来使用 `/dev/urandom` 来生成，不过并不算推荐此种方式
 
 ### 更新日志
 
@@ -276,7 +274,7 @@ update kcptun to v20181114
 
 - 2018-12-14 update shadowsocks
 
-update shadowsocks to 3.2.3
+update shadowsocks to v3.2.3
 
 - 2018-12-26 update kcptun
 
@@ -290,6 +288,46 @@ update kcptun to v20190109
 
 add v2ray-plugin support
 
-- 2019-02-26 update to 3.2.4
+- 2019-02-26 update to v3.2.4
 
-update shadowsocks to 3.2.4
+update shadowsocks to v3.2.4
+
+- 2019-04-14 update to v3.2.5
+
+update shadowsocks to v3.2.5, update kcptun to v20190409
+
+- 2019-04-24 update kcptun
+
+update kcptun to v20190424
+
+- 2019-04-29 add runit
+
+add runit, remove rng-tools
+
+- 2019-06-16 update kcptun
+
+update kcptun to v20190611
+
+- 2019-09-15 update shadowsocks to v3.3.1
+
+update shadowsocks to v3.3.1
+update kcptun to v20190905
+update v2ray-plugin to v1.1.0
+
+- 2019-09-24 update kcptun
+
+update kcptun to v20190923
+
+- 2019-11-01 update shadowsocks
+
+update shadowsocks to v3.3.3
+
+- 2019-12-17 fix port binding
+
+fix port binding
+update kcptun to v20191127
+
+- 2020-01-01 update kcptun
+
+update kcptun to v20191229
+update base image to alpine 3.11
